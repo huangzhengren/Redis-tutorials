@@ -28,6 +28,19 @@
   - [配置`systemd`管理`redis`](#配置systemd管理redis)
   - [重载配置，启动`redis`，查看`redis`状态、重启`redis`](#重载配置启动redis查看redis状态重启redis)
   - [停止`redis`,查看`redis`状态](#停止redis查看redis状态)
+  - [确认`systemd`配置无误后，启动`redis`，进入日志所在目录查看日志](#确认systemd配置无误后启动redis进入日志所在目录查看日志)
+    - [您请求的最大客户端数量为10000，至少需要10032个最大文件描述符。服务器无法将最大打开文件设置为10032，因为操作系统错误:操作不允许。当前最大打开文件是4096。`maxclients`已经减少到4064，以弥补低`ulimit`。如果需要更高的`maxclients`，请增加`ulimit -n`。](#您请求的最大客户端数量为10000至少需要10032个最大文件描述符服务器无法将最大打开文件设置为10032因为操作系统错误操作不允许当前最大打开文件是4096maxclients已经减少到4064以弥补低ulimit如果需要更高的maxclients请增加ulimit--n)
+  - [调整系统中最大可同时存在的进程数和最大文件数](#调整系统中最大可同时存在的进程数和最大文件数)
+  - [执行`source /etc/profile`，使配置生效](#执行source-etcprofile使配置生效)
+  - [重启，依然报错，在`redis_6380.service`文件中加上`LimitNOFILE=65535`](#重启依然报错在redis_6380service文件中加上limitnofile65535)
+  - [重载配置，重启`redis`查看日志,文件描述符的报错已解决](#重载配置重启redis查看日志文件描述符的报错已解决)
+    - [解决警告`WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.`](#解决警告warning-the-tcp-backlog-setting-of-511-cannot-be-enforced-because-procsysnetcoresomaxconn-is-set-to-the-lower-value-of-128)
+  - [重启`redis`](#重启redis)
+    - [解决警告`WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.`](#解决警告warning-overcommit_memory-is-set-to-0-background-save-may-fail-under-low-memory-condition-to-fix-this-issue-add-vmovercommit_memory--1-to-etcsysctlconf-and-then-reboot-or-run-the-command-sysctl-vmovercommit_memory1-for-this-to-take-effect)
+  - [重启redis](#重启redis-1)
+    - [解决警告`WARNING you have Transparent Huge Pages (THP) support enabled in your kernel. This will create latency and memory usage issues with Redis. To fix this issue run the command 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' as root, and add it to your /etc/rc.local in order to retain the setting after a reboot. Redis must be restarted after THP is disabled.`](#解决警告warning-you-have-transparent-huge-pages-thp-support-enabled-in-your-kernel-this-will-create-latency-and-memory-usage-issues-with-redis-to-fix-this-issue-run-the-command-echo-never--syskernelmmtransparent_hugepageenabled-as-root-and-add-it-to-your-etcrclocal-in-order-to-retain-the-setting-after-a-reboot-redis-must-be-restarted-after-thp-is-disabled)
+  - [重启`redis`](#重启redis-2)
+  - [设置开机启动](#设置开机启动)
 
 # `CentOS7.9`安装`redis-4.0.14`
 
@@ -279,5 +292,331 @@ EOF
 ```shell
 [root@node01 redis]# systemctl stop redis_6380.service
 [root@node01 redis]# systemctl status redis_6380.service
+```
+
+## 确认`systemd`配置无误后，启动`redis`，进入日志所在目录查看日志
+
+```shell
+[root@node01 redis]# systemctl start redis_6380.service
+[root@node01 redis]# cd /data/redis/logs
+[root@node01 logs]# tail -100f redis_6380.log
+```
+
+```
+1560:C 08 Aug 15:32:34.519 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1560:C 08 Aug 15:32:34.519 # Redis version=4.0.14, bits=64, commit=00000000, modified=0, pid=1560, just started
+1560:C 08 Aug 15:32:34.519 # Configuration loaded
+1560:C 08 Aug 15:32:34.519 * supervised by systemd, will signal readiness
+1560:M 08 Aug 15:32:34.532 # You requested maxclients of 10000 requiring at least 10032 max file descriptors.
+1560:M 08 Aug 15:32:34.532 # Server can't set maximum open files to 10032 because of OS error: Operation not permitted.
+1560:M 08 Aug 15:32:34.532 # Current maximum open files is 4096. maxclients has been reduced to 4064 to compensate for low ulimit. If you need higher maxclients increase 'ulimit -n'.
+                _._                                                  
+           _.-``__ ''-._                                             
+      _.-``    `.  `_.  ''-._           Redis 4.0.14 (00000000/0) 64 bit
+  .-`` .-```.  ```\/    _.,_ ''-._                                   
+ (    '      ,       .-`  | `,    )     Running in standalone mode
+ |`-._`-...-` __...-.``-._|'` _.-'|     Port: 6380
+ |    `-._   `._    /     _.-'    |     PID: 1560
+  `-._    `-._  `-./  _.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |           http://redis.io        
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |                                  
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+      `-._    `-.__.-'    _.-'                                       
+          `-._        _.-'                                           
+              `-.__.-'                                               
+
+1560:M 08 Aug 15:32:34.535 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1560:M 08 Aug 15:32:34.535 # Server initialized
+1560:M 08 Aug 15:32:34.535 # WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+1560:M 08 Aug 15:32:34.536 # WARNING you have Transparent Huge Pages (THP) support enabled in your kernel. This will create latency and memory usage issues with Redis. To fix this issue run the command 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' as root, and add it to your /etc/rc.local in order to retain the setting after a reboot. Redis must be restarted after THP is disabled.
+1560:M 08 Aug 15:32:34.536 . Unrecognized RDB AUX field: 'redis-ver'
+1560:M 08 Aug 15:32:34.536 . Unrecognized RDB AUX field: 'redis-bits'
+1560:M 08 Aug 15:32:34.536 . Unrecognized RDB AUX field: 'ctime'
+1560:M 08 Aug 15:32:34.536 . Unrecognized RDB AUX field: 'used-mem'
+1560:M 08 Aug 15:32:34.536 . Unrecognized RDB AUX field: 'aof-preamble'
+1560:M 08 Aug 15:32:34.536 * DB loaded from disk: 0.000 seconds
+1560:M 08 Aug 15:32:34.536 * Ready to accept connections
+1560:M 08 Aug 15:32:34.538 - DB 0: 3 keys (0 volatile) in 4 slots HT.
+1560:M 08 Aug 15:32:34.538 - 0 clients connected (0 slaves), 544464 bytes in use
+```
+
+### 您请求的最大客户端数量为10000，至少需要10032个最大文件描述符。服务器无法将最大打开文件设置为10032，因为操作系统错误:操作不允许。当前最大打开文件是4096。`maxclients`已经减少到4064，以弥补低`ulimit`。如果需要更高的`maxclients`，请增加`ulimit -n`。
+
+```
+1560:M 08 Aug 15:32:34.532 # You requested maxclients of 10000 requiring at least 10032 max file descriptors.
+1560:M 08 Aug 15:32:34.532 # Server can't set maximum open files to 10032 because of OS error: Operation not permitted.
+1560:M 08 Aug 15:32:34.532 # Current maximum open files is 4096. maxclients has been reduced to 4064 to compensate for low ulimit. If you need higher maxclients increase 'ulimit -n'.
+```
+
+## 调整系统中最大可同时存在的进程数和最大文件数
+
+```shell
+[root@node01 logs]# cat >> /etc/security/limits.conf << EOF
+* hard nproc 65535
+* soft nproc 65535
+* hard nofile 65535
+* soft nofile 65535
+EOF
+```
+
+## 执行`source /etc/profile`，使配置生效
+
+```shell
+[root@node01 logs]# source /etc/profile
+```
+
+## 重启，依然报错，在`redis_6380.service`文件中加上`LimitNOFILE=65535`
+
+```shell
+[root@node01 logs]# cat > /usr/lib/systemd/system/redis_6380.service << EOF
+[Unit]
+Description=Redis persistent key-value database
+After=network.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/redis-server /data/redis/conf/redis_6380.conf --supervised systemd
+ExecStop=/usr/local/bin/redis-cli -p 6380 -a qiqi SHUTDOWN
+Type=notify
+User=redis
+Group=redis
+RuntimeDirectory=redis
+RuntimeDirectoryMode=0755
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+## 重载配置，重启`redis`查看日志,文件描述符的报错已解决
+
+```shell
+[root@node01 logs]# systemctl daemon-reload
+[root@node01 logs]# systemctl restart redis_6380.service
+```
+
+```
+1923:M 08 Aug 16:55:23.621 # User requested shutdown...
+1923:M 08 Aug 16:55:23.621 * Saving the final RDB snapshot before exiting.
+1923:M 08 Aug 16:55:23.622 * DB saved on disk
+1923:M 08 Aug 16:55:23.622 * Removing the pid file.
+1923:M 08 Aug 16:55:23.622 # Redis is now ready to exit, bye bye...
+1941:C 08 Aug 16:55:23.634 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1941:C 08 Aug 16:55:23.635 # Redis version=4.0.14, bits=64, commit=00000000, modified=0, pid=1941, just started
+1941:C 08 Aug 16:55:23.635 # Configuration loaded
+1941:C 08 Aug 16:55:23.635 * supervised by systemd, will signal readiness
+                _._                                                  
+           _.-``__ ''-._                                             
+      _.-``    `.  `_.  ''-._           Redis 4.0.14 (00000000/0) 64 bit
+  .-`` .-```.  ```\/    _.,_ ''-._                                   
+ (    '      ,       .-`  | `,    )     Running in standalone mode
+ |`-._`-...-` __...-.``-._|'` _.-'|     Port: 6380
+ |    `-._   `._    /     _.-'    |     PID: 1941
+  `-._    `-._  `-./  _.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |           http://redis.io        
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |                                  
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+      `-._    `-.__.-'    _.-'                                       
+          `-._        _.-'                                           
+              `-.__.-'                                               
+
+1941:M 08 Aug 16:55:23.637 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1941:M 08 Aug 16:55:23.637 # Server initialized
+1941:M 08 Aug 16:55:23.637 # WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+1941:M 08 Aug 16:55:23.637 # WARNING you have Transparent Huge Pages (THP) support enabled in your kernel. This will create latency and memory usage issues with Redis. To fix this issue run the command 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' as root, and add it to your /etc/rc.local in order to retain the setting after a reboot. Redis must be restarted after THP is disabled.
+1941:M 08 Aug 16:55:23.637 . Unrecognized RDB AUX field: 'redis-ver'
+1941:M 08 Aug 16:55:23.637 . Unrecognized RDB AUX field: 'redis-bits'
+1941:M 08 Aug 16:55:23.637 . Unrecognized RDB AUX field: 'ctime'
+1941:M 08 Aug 16:55:23.637 . Unrecognized RDB AUX field: 'used-mem'
+1941:M 08 Aug 16:55:23.637 . Unrecognized RDB AUX field: 'aof-preamble'
+1941:M 08 Aug 16:55:23.637 * DB loaded from disk: 0.000 seconds
+1941:M 08 Aug 16:55:23.637 * Ready to accept connections
+1941:M 08 Aug 16:55:23.638 - DB 0: 3 keys (0 volatile) in 4 slots HT.
+1941:M 08 Aug 16:55:23.638 - 0 clients connected (0 slaves), 853136 bytes in use
+```
+
+### 解决警告`WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.`
+
+```shell
+[root@node01 logs]# cat >> /etc/sysctl.conf << EOF
+net.core.somaxconn=1024
+EOF
+[root@node01 logs]# sysctl -p
+```
+
+## 重启`redis`
+
+```shell
+[root@node01 logs]# systemctl restart redis_6380.service
+```
+
+```
+1941:M 08 Aug 17:04:38.316 # User requested shutdown...
+1941:M 08 Aug 17:04:38.316 * Saving the final RDB snapshot before exiting.
+1941:M 08 Aug 17:04:38.317 * DB saved on disk
+1941:M 08 Aug 17:04:38.317 * Removing the pid file.
+1941:M 08 Aug 17:04:38.318 # Redis is now ready to exit, bye bye...
+1976:C 08 Aug 17:04:38.337 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1976:C 08 Aug 17:04:38.337 # Redis version=4.0.14, bits=64, commit=00000000, modified=0, pid=1976, just started
+1976:C 08 Aug 17:04:38.337 # Configuration loaded
+1976:C 08 Aug 17:04:38.337 * supervised by systemd, will signal readiness
+                _._                                                  
+           _.-``__ ''-._                                             
+      _.-``    `.  `_.  ''-._           Redis 4.0.14 (00000000/0) 64 bit
+  .-`` .-```.  ```\/    _.,_ ''-._                                   
+ (    '      ,       .-`  | `,    )     Running in standalone mode
+ |`-._`-...-` __...-.``-._|'` _.-'|     Port: 6380
+ |    `-._   `._    /     _.-'    |     PID: 1976
+  `-._    `-._  `-./  _.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |           http://redis.io        
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |                                  
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+      `-._    `-.__.-'    _.-'                                       
+          `-._        _.-'                                           
+              `-.__.-'                                               
+
+1976:M 08 Aug 17:04:38.339 # Server initialized
+1976:M 08 Aug 17:04:38.340 # WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+1976:M 08 Aug 17:04:38.340 # WARNING you have Transparent Huge Pages (THP) support enabled in your kernel. This will create latency and memory usage issues with Redis. To fix this issue run the command 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' as root, and add it to your /etc/rc.local in order to retain the setting after a reboot. Redis must be restarted after THP is disabled.
+1976:M 08 Aug 17:04:38.340 . Unrecognized RDB AUX field: 'redis-ver'
+1976:M 08 Aug 17:04:38.341 . Unrecognized RDB AUX field: 'redis-bits'
+1976:M 08 Aug 17:04:38.341 . Unrecognized RDB AUX field: 'ctime'
+1976:M 08 Aug 17:04:38.341 . Unrecognized RDB AUX field: 'used-mem'
+1976:M 08 Aug 17:04:38.341 . Unrecognized RDB AUX field: 'aof-preamble'
+1976:M 08 Aug 17:04:38.341 * DB loaded from disk: 0.000 seconds
+1976:M 08 Aug 17:04:38.341 * Ready to accept connections
+1976:M 08 Aug 17:04:38.341 - DB 0: 3 keys (0 volatile) in 4 slots HT.
+1976:M 08 Aug 17:04:38.341 - 0 clients connected (0 slaves), 853136 bytes in use
+```
+
+### 解决警告`WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.`
+
+```shell
+[root@node01 logs]# cat >> /etc/sysctl.conf << EOF
+vm.overcommit_memory=1
+EOF
+[root@node01 logs]# sysctl -p
+```
+
+## 重启redis
+
+```shell
+[root@node01 logs]# systemctl restart redis_6380.service
+```
+
+```
+1976:M 08 Aug 17:11:23.006 # User requested shutdown...
+1976:M 08 Aug 17:11:23.006 * Saving the final RDB snapshot before exiting.
+1976:M 08 Aug 17:11:23.007 * DB saved on disk
+1976:M 08 Aug 17:11:23.007 * Removing the pid file.
+1976:M 08 Aug 17:11:23.007 # Redis is now ready to exit, bye bye...
+1994:C 08 Aug 17:11:23.020 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1994:C 08 Aug 17:11:23.020 # Redis version=4.0.14, bits=64, commit=00000000, modified=0, pid=1994, just started
+1994:C 08 Aug 17:11:23.020 # Configuration loaded
+1994:C 08 Aug 17:11:23.020 * supervised by systemd, will signal readiness
+                _._                                                  
+           _.-``__ ''-._                                             
+      _.-``    `.  `_.  ''-._           Redis 4.0.14 (00000000/0) 64 bit
+  .-`` .-```.  ```\/    _.,_ ''-._                                   
+ (    '      ,       .-`  | `,    )     Running in standalone mode
+ |`-._`-...-` __...-.``-._|'` _.-'|     Port: 6380
+ |    `-._   `._    /     _.-'    |     PID: 1994
+  `-._    `-._  `-./  _.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |           http://redis.io        
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |                                  
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+      `-._    `-.__.-'    _.-'                                       
+          `-._        _.-'                                           
+              `-.__.-'                                               
+
+1994:M 08 Aug 17:11:23.022 # Server initialized
+1994:M 08 Aug 17:11:23.022 # WARNING you have Transparent Huge Pages (THP) support enabled in your kernel. This will create latency and memory usage issues with Redis. To fix this issue run the command 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' as root, and add it to your /etc/rc.local in order to retain the setting after a reboot. Redis must be restarted after THP is disabled.
+1994:M 08 Aug 17:11:23.022 . Unrecognized RDB AUX field: 'redis-ver'
+1994:M 08 Aug 17:11:23.022 . Unrecognized RDB AUX field: 'redis-bits'
+1994:M 08 Aug 17:11:23.022 . Unrecognized RDB AUX field: 'ctime'
+1994:M 08 Aug 17:11:23.022 . Unrecognized RDB AUX field: 'used-mem'
+1994:M 08 Aug 17:11:23.022 . Unrecognized RDB AUX field: 'aof-preamble'
+1994:M 08 Aug 17:11:23.022 * DB loaded from disk: 0.000 seconds
+1994:M 08 Aug 17:11:23.022 * Ready to accept connections
+1994:M 08 Aug 17:11:23.022 - DB 0: 3 keys (0 volatile) in 4 slots HT.
+1994:M 08 Aug 17:11:23.022 - 0 clients connected (0 slaves), 853136 bytes in use
+```
+
+### 解决警告`WARNING you have Transparent Huge Pages (THP) support enabled in your kernel. This will create latency and memory usage issues with Redis. To fix this issue run the command 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' as root, and add it to your /etc/rc.local in order to retain the setting after a reboot. Redis must be restarted after THP is disabled.`
+
+```shell
+[root@node01 logs]# cat /sys/kernel/mm/transparent_hugepage/enabled
+[root@node01 logs]# echo never > /sys/kernel/mm/transparent_hugepage/enabled
+[root@node01 logs]# cat /sys/kernel/mm/transparent_hugepage/enabled
+[root@node01 logs]# echo 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' >> /etc/rc.local
+[root@node01 logs]# chmod u+x /etc/rc.d/rc.local
+```
+
+## 重启`redis`
+
+```shell
+[root@node01 logs]# systemctl restart redis_6380.service
+```
+
+```
+1159:M 08 Aug 17:30:32.644 # User requested shutdown...
+1159:M 08 Aug 17:30:32.645 * Saving the final RDB snapshot before exiting.
+1159:M 08 Aug 17:30:32.646 * DB saved on disk
+1159:M 08 Aug 17:30:32.646 * Removing the pid file.
+1159:M 08 Aug 17:30:32.647 # Redis is now ready to exit, bye bye...
+1172:C 08 Aug 17:30:32.661 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1172:C 08 Aug 17:30:32.661 # Redis version=4.0.14, bits=64, commit=00000000, modified=0, pid=1172, just started
+1172:C 08 Aug 17:30:32.661 # Configuration loaded
+1172:C 08 Aug 17:30:32.661 * supervised by systemd, will signal readiness
+                _._                                                  
+           _.-``__ ''-._                                             
+      _.-``    `.  `_.  ''-._           Redis 4.0.14 (00000000/0) 64 bit
+  .-`` .-```.  ```\/    _.,_ ''-._                                   
+ (    '      ,       .-`  | `,    )     Running in standalone mode
+ |`-._`-...-` __...-.``-._|'` _.-'|     Port: 6380
+ |    `-._   `._    /     _.-'    |     PID: 1172
+  `-._    `-._  `-./  _.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |           http://redis.io        
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+ |`-._`-._    `-.__.-'    _.-'_.-'|                                  
+ |    `-._`-._        _.-'_.-'    |                                  
+  `-._    `-._`-.__.-'_.-'    _.-'                                   
+      `-._    `-.__.-'    _.-'                                       
+          `-._        _.-'                                           
+              `-.__.-'                                               
+
+1172:M 08 Aug 17:30:32.664 # Server initialized
+1172:M 08 Aug 17:30:32.664 . Unrecognized RDB AUX field: 'redis-ver'
+1172:M 08 Aug 17:30:32.664 . Unrecognized RDB AUX field: 'redis-bits'
+1172:M 08 Aug 17:30:32.664 . Unrecognized RDB AUX field: 'ctime'
+1172:M 08 Aug 17:30:32.664 . Unrecognized RDB AUX field: 'used-mem'
+1172:M 08 Aug 17:30:32.664 . Unrecognized RDB AUX field: 'aof-preamble'
+1172:M 08 Aug 17:30:32.664 * DB loaded from disk: 0.000 seconds
+1172:M 08 Aug 17:30:32.664 * Ready to accept connections
+1172:M 08 Aug 17:30:32.664 - DB 0: 3 keys (0 volatile) in 4 slots HT.
+1172:M 08 Aug 17:30:32.664 - 0 clients connected (0 slaves), 853136 bytes in use
+```
+
+## 设置开机启动
+
+```shell
+[root@node01 logs]# systemctl list-unit-files redis_6380.service
+[root@node01 logs]# systemctl enable redis_6380.service
+[root@node01 logs]# systemctl list-unit-files redis_6380.service
 ```
 
